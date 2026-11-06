@@ -1,0 +1,72 @@
+{
+  "name": "@local/prirexstudio",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "PriRex Studio: локальный сервер + WebSocket live-reload, адаптивная панель, перехват ошибок консоли и DOM-инспектор с CSS-метаданными.",
+  "license": "MIT",
+  "author": {
+    "name": "Prirex",
+    "url": "https://github.com/Prirex"
+  },
+  "homepage": "https://github.com/Prirex/PriRex-Preview#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Prirex/PriRex-Preview.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Prirex/PriRex-Preview/issues"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "live-reload",
+    "websocket",
+    "dom-inspector",
+    "preview",
+    "developer-tools"
+  ],
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "lib/",
+    "locale/",
+    "icon.svg",
+    "cordis.patch.yml"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/finalize-client.mjs",
+    "smoke": "node scripts/smoke-client.mjs lib/client.js",
+    "test:hub": "node scripts/test-hub.mjs",
+    "check": "npm run build && npm run smoke"
+  },
+  "dependencies": {
+    "ws": "^8.17.0",
+    "chokidar": "^3.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-sidebar-right"
+      ]
+    }
+  }
+}

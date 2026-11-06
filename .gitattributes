@@ -1,0 +1,23 @@
+# Normalize line endings so the repo is stable across Windows/Linux/macOS checkouts.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
+
+*.ts   text eol=lf
+*.cts  text eol=lf
+*.mjs  text eol=lf
+*.js   text eol=lf
+*.json text eol=lf
+*.yml  text eol=lf
+*.md   text eol=lf
+*.svg  text eol=lf
+
+pnpm-lock.yaml text eol=lf
