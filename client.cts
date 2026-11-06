@@ -934,12 +934,12 @@ function factory(requireFn) {
 }
 // ---------------------------------------------------------------------------
 // Точка входа артефакта: регистрация фабрики в таблице модулей хоста.
-// id обязан совпадать с именем пакета (@local/prirexstudio из package.json).
+// id обязан совпадать с именем пакета (dsh-prirex-preview из package.json).
 // ---------------------------------------------------------------------------
 const loader = (window as any).__ModuleLoader__;
 if (loader && typeof loader.load === 'function') {
     loader.load({
-        id: '@local/prirexstudio',
+        id: 'dsh-prirex-preview',
         factory,
     });
 }

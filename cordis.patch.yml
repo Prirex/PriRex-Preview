@@ -1,4 +1,4 @@
 - insert:
   - id: prirexstudio
-    name: '@local/prirexstudio'
+    name: 'dsh-prirex-preview'
     config: {}

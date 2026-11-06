@@ -15,8 +15,8 @@
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/Prirex/PriRex-Preview?style=for-the-badge&color=2ea043"></a>
 </p>
 
-<!-- НАЧАЛО СКРИНШОТА: Вставьте сюда скриншот интерфейса точечного редактирования -->
-![(Превью) Интерактивный UI плагина](assets/preview.png)
+<!-- НАЧАЛО СКРИНШОТА: Реальный кадр — панель точечного редактирования на тестовой странице -->
+![(Превью) Панель «Что изменить?» над замороженным элементом](assets/inspector.png)
 <!-- КОНЕЦ СКРИНШОТА -->
 
 ---
@@ -35,6 +35,10 @@ Everything is **local by design**: the HTTP server and the WebSocket hub bind to
 no telemetry is emitted, and nothing leaves your machine.
 
 ### Key Features
+
+<!-- НАЧАЛО СКРИНШОТА: Вставьте сюда скриншот вкладки PriRex Preview в правой панели DSH -->
+![(Превью) Вкладка PriRex Preview: фреймы устройств и живой сайт](assets/preview.png)
+<!-- КОНЕЦ СКРИНШОТА -->
 
 - **One-click live server** — serves the selected folder from an ephemeral localhost port with
   CORS enabled; `index.html` is picked automatically when present.
@@ -160,9 +164,11 @@ please report privately, never in a public issue.
 
 ### Publishing to npm (optional)
 
-`package.json` sets `"private": true` to prevent accidental publishes. To distribute through npm,
-flip that flag, replace the `@local/` scope with your own, and update `cordis.patch.yml` + the
-`name` field together.
+`package.json` sets `"private": true` to prevent accidental publishes. The package is named
+`dsh-prirex-preview`; to ship it through npm, flip that flag and — if you need a different name or
+scope — update `name` in `package.json`, `cordis.patch.yml` and the `id` in
+[`client.cts`](client.cts) **together**, because the client registers itself in the DSH module table
+under the package name.
 
 ### Changelog / What's new
 
@@ -194,6 +200,10 @@ HTTP-сервер с живой перезагрузкой, фреймы «де�
 нет, данные не покидают машину.
 
 ### Ключевые возможности
+
+<!-- НАЧАЛО СКРИНШОТА: Вставьте сюда скриншот вкладки PriRex Preview в правой панели DSH -->
+![(Превью) Вкладка PriRex Preview: фреймы устройств и живой сайт](assets/preview.png)
+<!-- КОНЕЦ СКРИНШОТА -->
 
 - **Сервер в один клик** — выбранная папка раздаётся на свободном порту localhost с открытым
   CORS; `index.html` подхватывается автоматически.
@@ -311,9 +321,10 @@ path traversal, инспектор никогда не отправляет со
 
 ### Публикация в npm (опционально)
 
-В `package.json` стоит `"private": true`, чтобы исключить случайную публикацию. Для раздачи через
-npm снимите этот флаг, замените скоуп `@local/` на свой и одновременно обновите `name` и
-`cordis.patch.yml`.
+В `package.json` стоит `"private": true`, чтобы исключить случайную публикацию. Пакет называется
+`dsh-prirex-preview`; для раздачи через npm снимите этот флаг, а если нужно другое имя или скоуп —
+меняйте `name` в `package.json`, `cordis.patch.yml` и `id` в [`client.cts`](client.cts)
+**одновременно**: клиент регистрирует себя в таблице модулей DSH под именем пакета.
 
 ### Что нового
 

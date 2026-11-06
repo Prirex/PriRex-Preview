@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "PriRex Studio",
+    "title": "PriRex Preview",
     "description": "Локальный сервер с WebSocket live-reload, адаптивная панель устройств, перехват ошибок консоли и DOM-инспектор."
   }
 }

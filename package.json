@@ -1,9 +1,9 @@
 {
-  "name": "@local/prirexstudio",
+  "name": "dsh-prirex-preview",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "PriRex Studio: локальный сервер + WebSocket live-reload, адаптивная панель, перехват ошибок консоли и DOM-инспектор с CSS-метаданными.",
+  "description": "PriRex Preview: живой предпросмотр в DeepSeek Harness — локальный сервер + WebSocket live-reload, панель устройств, перехват ошибок консоли и точечный DOM-инспектор с CSS-метаданными.",
   "license": "MIT",
   "author": {
     "name": "Prirex",

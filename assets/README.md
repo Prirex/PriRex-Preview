@@ -2,19 +2,22 @@
 
 Place release screenshots in this folder. / Положите скриншоты релиза в эту папку.
 
-> `preview.png` currently ships as a labelled **placeholder** so the README renders without a
-> broken image. Replace it with a real screenshot before publishing.
-> / Сейчас `preview.png` — подписанная **заглушка**, чтобы README не показывал «битую» картинку.
-> Замените её настоящим скриншотом перед публикацией.
+| File / Файл        | Status / Статус   | Content / Содержимое                                                   |
+| ------------------ | ----------------- | ---------------------------------------------------------------------- |
+| `inspector.png`    | real capture / реальный кадр | "What should change?" panel over a frozen element, served by the plugin |
+| `preview.png`      | placeholder / заглушка | Tab with device frames + live page (replace it / замените)        |
+| `console-feed.png` | optional / опционально | Console error journal with a captured error                          |
 
-| File / Файл        | Used in / Используется в            | Content / Содержимое                                             |
-| ------------------ | ----------------------------------- | ---------------------------------------------------------------- |
-| `preview.png`      | `README.md` hero block              | Tab with device frames + page preview / вкладка с фреймами и сайтом |
-| `inspector.png`    | optional, README feature list       | "What should change?" panel over a frozen element / панель правки |
-| `console-feed.png` | optional, README feature list       | Console error journal with a captured error / журнал ошибок       |
+`inspector.png` was captured from the actual injected inspector: the page is served by the plugin's
+preview server, the `<h1>` was hovered until it froze (pink outline) and the edit panel opened.
+Русский интерфейс панели соответствует языку по умолчанию (`prirex.lang = ru`).
+
+`preview.png` is currently a labelled **placeholder** so the README renders without a broken image;
+replace it with a real screenshot of the DSH right-panel tab before publishing.
+/ Сейчас `preview.png` — подписанная **заглушка**; замените её настоящим скриншотом вкладки.
 
 Guidelines / Требования:
 
 - PNG, 2× scaling (Retina), dark theme of DSH / тёмная тема DSH;
 - crop out personal paths, API keys, chat content / обрежьте личные пути, ключи и переписку;
-- recommended hero size: 1600×900 / рекомендуемый размер hero-картинки.
+- recommended size for the tab shot: 1200–1600 px wide / для вкладки — 1200–1600 px по ширине.
