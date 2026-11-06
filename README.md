@@ -23,8 +23,8 @@
 
 | Device frames · Панель устройств | Point-and-ask inspector · Точечный инспектор |
 |---|---|
-| ![Desktop 1920 px](assets/device-frame.png) | ![Inspector panel over a frozen element](assets/inspector.png) |
-| 1920 / 768 / 375 px inside the sidebar, page scaled to fit.<br>1920 / 768 / 375 px внутри боковой панели, страница масштабируется. | Hover → countdown → freeze (pink outline) → «Что изменить?».<br>Наведение → отсчёт → заморозка (розовый контур) → «Что изменить?». |
+| ![Desktop 1920 px, tablet 768 px, mobile 375 px buttons](assets/device-buttons.png) | ![Inspector panel over a frozen element](assets/inspector.png) |
+| `Desktop (1920px)` / `Tablet (768px)` / `Mobile (375px)` switch the frame; the page is scaled to fit the sidebar, `In browser` opens the same URL outside DSH.<br>`Desktop (1920px)` / `Tablet (768px)` / `Mobile (375px)` переключают фрейм, страница масштабируется под ширину боковой панели, `In browser` открывает тот же адрес вне DSH. | Hover → countdown → freeze (pink outline) → «Что изменить?».<br>Наведение → обратный отсчёт → заморозка (розовый контур) → «Что изменить?». |
 
 **From the inspector to the chat draft · Из инспектора в черновик чата**
 
@@ -33,6 +33,14 @@
 `outerHTML` + computed styles + your comment are inserted into the active chat draft; **auto-submit is off**, so you review and press send yourself — in the screenshot the payload is already in the input, the tab stays live beside it.
 
 `outerHTML` + вычисленные стили + ваш комментарий вставляются в черновик активного чата; **автоотправка выключена** — вы проверяете текст и отправляете сами. На скриншоте payload уже в поле ввода, а вкладка с живой страницей остаётся рядом.
+
+**Result · Результат**
+
+![The letter R is now red and large — the requested change applied](assets/result.png)
+
+The loop closed: the agent edited the code and the page reloaded through live reload — the `R` in the headline is now red and large, exactly as asked in the panel.
+
+Цикл замкнулся: агент поправил код, страница перезагрузилась через live reload — `R` в заголовке стала красной и крупной, ровно как просили в панели.
 
 ---
 
