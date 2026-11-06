@@ -1,23 +1,21 @@
 # Screenshots / Скриншоты
 
-Place release screenshots in this folder. / Положите скриншоты релиза в эту папку.
+All images here are real captures of PriRex Preview inside DeepSeek Harness.
+Все изображения — реальные кадры PriRex Preview в DeepSeek Harness.
 
-| File / Файл        | Status / Статус   | Content / Содержимое                                                   |
-| ------------------ | ----------------- | ---------------------------------------------------------------------- |
-| `inspector.png`    | real capture / реальный кадр | "What should change?" panel over a frozen element, served by the plugin |
-| `preview.png`      | placeholder / заглушка | Tab with device frames + live page (replace it / замените)        |
-| `console-feed.png` | optional / опционально | Console error journal with a captured error                          |
+| File / Файл          | Where it is used / Где используется            | Content / Содержимое                                                     |
+| -------------------- | --------------------------------------------- | ------------------------------------------------------------------------ |
+| `preview.png`        | README hero                                   | Open tab: server running, device buttons, live page, inspector panel      |
+| `device-frame.png`   | README, screenshots table                     | 1920 px frame with the previewed page, no DSH chrome                      |
+| `inspector.png`      | README, screenshots table                     | Close-up: frozen `<span>` with the «Что изменить?» panel                   |
+| `chat-insertion.png` | README, "From the inspector to the chat draft"| Chat draft with injected HTML + computed styles beside the live tab       |
+| `console-feed.png`   | optional / опционально                        | Console error journal with a captured error (not captured yet)            |
 
-`inspector.png` was captured from the actual injected inspector: the page is served by the plugin's
-preview server, the `<h1>` was hovered until it froze (pink outline) and the edit panel opened.
-Русский интерфейс панели соответствует языку по умолчанию (`prirex.lang = ru`).
+Notes / Заметки:
 
-`preview.png` is currently a labelled **placeholder** so the README renders without a broken image;
-replace it with a real screenshot of the DSH right-panel tab before publishing.
-/ Сейчас `preview.png` — подписанная **заглушка**; замените её настоящим скриншотом вкладки.
-
-Guidelines / Требования:
-
-- PNG, 2× scaling (Retina), dark theme of DSH / тёмная тема DSH;
-- crop out personal paths, API keys, chat content / обрежьте личные пути, ключи и переписку;
-- recommended size for the tab shot: 1200–1600 px wide / для вкладки — 1200–1600 px по ширине.
+- `chat-insertion.png` documents the core loop: inspector payload → draft → you press send
+  (auto-submit is always off). / Ключевой цикл: payload инспектора → черновик → отправляете вы.
+- Keep screenshots free of personal paths, API keys and unrelated chat content. /
+  Без личных путей, ключей и посторонней переписки.
+- Replace a file in place to refresh the README — filenames are referenced directly. /
+  Обновляйте картинки под теми же именами — README ссылается на них напрямую.

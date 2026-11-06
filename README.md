@@ -15,9 +15,24 @@
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/github/license/Prirex/PriRex-Preview?style=for-the-badge&color=2ea043"></a>
 </p>
 
-<!-- НАЧАЛО СКРИНШОТА: Реальный кадр — панель точечного редактирования на тестовой странице -->
-![(Превью) Панель «Что изменить?» над замороженным элементом](assets/inspector.png)
+<!-- НАЧАЛО СКРИНШОТА: Реальная вкладка PriRex Preview — сервер запущен, фреймы устройств, живой предпросмотр -->
+![(Превью) Вкладка PriRex Preview: сервер запущен, панель устройств, открытая панель «Что изменить?»](assets/preview.png)
 <!-- КОНЕЦ СКРИНШОТА -->
+
+## Screenshots · Скриншоты
+
+| Device frames · Панель устройств | Point-and-ask inspector · Точечный инспектор |
+|---|---|
+| ![Desktop 1920 px](assets/device-frame.png) | ![Inspector panel over a frozen element](assets/inspector.png) |
+| 1920 / 768 / 375 px inside the sidebar, page scaled to fit.<br>1920 / 768 / 375 px внутри боковой панели, страница масштабируется. | Hover → countdown → freeze (pink outline) → «Что изменить?».<br>Наведение → отсчёт → заморозка (розовый контур) → «Что изменить?». |
+
+**From the inspector to the chat draft · Из инспектора в черновик чата**
+
+![HTML and computed styles inserted into the chat draft next to the live tab](assets/chat-insertion.png)
+
+`outerHTML` + computed styles + your comment are inserted into the active chat draft; **auto-submit is off**, so you review and press send yourself — in the screenshot the payload is already in the input, the tab stays live beside it.
+
+`outerHTML` + вычисленные стили + ваш комментарий вставляются в черновик активного чата; **автоотправка выключена** — вы проверяете текст и отправляете сами. На скриншоте payload уже в поле ввода, а вкладка с живой страницей остаётся рядом.
 
 ---
 
@@ -35,10 +50,6 @@ Everything is **local by design**: the HTTP server and the WebSocket hub bind to
 no telemetry is emitted, and nothing leaves your machine.
 
 ### Key Features
-
-<!-- НАЧАЛО СКРИНШОТА: Вставьте сюда скриншот вкладки PriRex Preview в правой панели DSH -->
-![(Превью) Вкладка PriRex Preview: фреймы устройств и живой сайт](assets/preview.png)
-<!-- КОНЕЦ СКРИНШОТА -->
 
 - **One-click live server** — serves the selected folder from an ephemeral localhost port with
   CORS enabled; `index.html` is picked automatically when present.
@@ -200,10 +211,6 @@ HTTP-сервер с живой перезагрузкой, фреймы «де�
 нет, данные не покидают машину.
 
 ### Ключевые возможности
-
-<!-- НАЧАЛО СКРИНШОТА: Вставьте сюда скриншот вкладки PriRex Preview в правой панели DSH -->
-![(Превью) Вкладка PriRex Preview: фреймы устройств и живой сайт](assets/preview.png)
-<!-- КОНЕЦ СКРИНШОТА -->
 
 - **Сервер в один клик** — выбранная папка раздаётся на свободном порту localhost с открытым
   CORS; `index.html` подхватывается автоматически.
