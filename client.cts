@@ -11,7 +11,28 @@ const LOGO_DATA_URI = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMgAAACFCAY
 const TAB_ID = 'prirexstudio';
 // Бренд: «R» в PriRex — красная.
 const BRAND_RED = '#ff3b5c';
-const VERSION = '1.0.0';
+const VERSION = '2.0.0';
+/** Лучшая стартовая страница: корневой index.html, затем ближайший вложенный. */
+function pickStaticFile(files, fallback) {
+    const list = Array.isArray(files) ? files.map((x) => String(x)) : [];
+    const root = list.find((f) => f.toLowerCase() === 'index.html');
+    if (root)
+        return root;
+    const indexes = list
+        .filter((f) => /(^|\/)index\.html$/i.test(f))
+        .sort((a, b) => a.split('/').length - b.split('/').length || a.localeCompare(b));
+    if (indexes.length > 0)
+        return indexes[0];
+    return list[0] ?? (typeof fallback === 'string' ? fallback : '');
+}
+/** pnpm/yarn/bun могут отсутствовать в PATH процесса DSH — запускаем скрипт через npm. */
+function normalizeCommand(command) {
+    const text = String(command ?? '').trim();
+    const hit = /^(pnpm|yarn|bun)\s+(?:run\s+)?([A-Za-z0-9:._-]+)(.*)$/i.exec(text);
+    if (!hit)
+        return text;
+    return `npm run ${hit[2]}${hit[3]}`;
+}
 const STRINGS = {
     ru: {
         title: 'PriRex Preview',
@@ -50,6 +71,22 @@ const STRINGS = {
         restartServer: '↻ Перезапустить сервер',
         pickDirShort: 'Выбрать папку',
         launchBtn: 'Запустить проект',
+        modeHeader: 'Проект:',
+        modeStatic: 'Статический сайт',
+        modeNode: 'Node.js-сервер',
+        commandLabel: 'Команда:',
+        commandPlaceholder: 'npm run dev',
+        launchNode: 'Запустить Node.js-сервер',
+        starting: 'Запуск…',
+        serverLog: 'Лог сервера:',
+        noLog: 'Вывод сервера появится здесь.',
+        commandRequired: 'Укажите команду запуска.',
+        detectedHint: 'Команду можно изменить; для статической папки переключите режим.',
+        showLog: 'Показать лог',
+        hideLog: 'Скрыть лог',
+        hostOutdated: 'Хост плагина ещё старой версии — откройте папку со статикой или перезапустите DSH, чтобы включить Node.js-режим.',
+        restartNeeded: 'Для новой версии плагина перезапустите DSH: хост-часть загрузится при старте.',
+        nothingFound: 'В этой папке не найдено ни HTML-сайта, ни Node.js-проекта. Выберите папку сайта (или его подпапку) либо укажите команду вручную.',
         descIntro: 'Плагин интегрирует живое окно предпросмотра вашего интерфейса напрямую в рабочую среду DeepSeek Harness, связывая визуальные элементы с мощностью ИИ-чата.',
         f1t: 'Полный отказ от ручного копирования',
         f1d: 'Автоматизация процессов: плагин полностью избавляет от необходимости копировать ответы нейросети и вручную переносить их в файлы проекта.',
@@ -59,7 +96,9 @@ const STRINGS = {
         f3d: 'Безопасная модификация: изменения вносятся строго в целевой компонент. Архитектура проекта и соседние функции полностью защищены от случайных поломок.',
         f4t: 'Прямая синхронизация правок (Hot Reload)',
         f4d: 'Мгновенное обновление: внесенные ИИ изменения сразу отображаются в окне превью в режиме реального времени при сохранении файлов.',
-        versionNote: 'Версия v1.0.0 — базовый минимум. В следующих версиях будет добавлена поддержка Node.js-сайтов, после чего обновится дизайн.',
+        f5t: 'Поддержка Node.js-сайтов',
+        f5d: 'Плагин находит dev/start-скрипт в package.json или точку входа Node.js, запускает сервер и показывает его через локальный прокси: HMR, API-запросы и DOM-инспектор работают как обычно.',
+        versionNote: 'Версия v2.0.0 — статические сайты и Node.js-проекты: автопоиск проекта, запуск dev-сервера и прокси-предпросмотр.',
     },
     en: {
         title: 'PriRex Preview',
@@ -98,6 +137,22 @@ const STRINGS = {
         restartServer: '↻ Restart server',
         pickDirShort: 'Pick folder',
         launchBtn: 'Launch project',
+        modeHeader: 'Project:',
+        modeStatic: 'Static site',
+        modeNode: 'Node.js server',
+        commandLabel: 'Command:',
+        commandPlaceholder: 'npm run dev',
+        launchNode: 'Start Node.js server',
+        starting: 'Starting…',
+        serverLog: 'Server log:',
+        noLog: 'Server output will appear here.',
+        commandRequired: 'Enter a launch command.',
+        detectedHint: 'You can edit the command; switch to static mode for a plain folder.',
+        showLog: 'Show log',
+        hideLog: 'Hide log',
+        hostOutdated: 'The plugin host is still an older build — open a static folder or restart DSH to enable Node.js mode.',
+        restartNeeded: 'Restart DSH to load the new plugin host; the client part is ready.',
+        nothingFound: 'No HTML site or Node.js project was found in this folder. Pick the site folder (or its subfolder) or type a command manually.',
         descIntro: 'The plugin integrates a live preview window of your interface directly into the DeepSeek Harness workspace, tying visual elements to the power of AI chat.',
         f1t: 'No more manual copying',
         f1d: 'Automation: the plugin removes the need to copy neural-network answers and move them into project files by hand.',
@@ -107,7 +162,9 @@ const STRINGS = {
         f3d: 'Safe modification: changes are made strictly in the target component. Project architecture and neighboring features stay protected from accidental breakage.',
         f4t: 'Direct edit sync (Hot Reload)',
         f4d: 'Instant updates: AI-applied changes appear in the preview window in real time when files are saved.',
-        versionNote: 'Version v1.0.0 is the basic minimum. Upcoming versions will add Node.js site support, then a design refresh.',
+        f5t: 'Node.js site support',
+        f5d: 'The plugin finds a dev/start script in package.json or a Node.js entry point, runs the server and previews it through a local proxy: HMR, API requests and the DOM inspector keep working.',
+        versionNote: 'Version v2.0.0 — static sites and Node.js projects: automatic project discovery, dev-server launch and proxied preview.',
     },
     zh: {
         title: 'PriRex Preview',
@@ -146,6 +203,22 @@ const STRINGS = {
         restartServer: '↻ 重启服务器',
         pickDirShort: '选择文件夹',
         launchBtn: '启动项目',
+        modeHeader: '项目：',
+        modeStatic: '静态网站',
+        modeNode: 'Node.js 服务器',
+        commandLabel: '命令：',
+        commandPlaceholder: 'npm run dev',
+        launchNode: '启动 Node.js 服务器',
+        starting: '启动中…',
+        serverLog: '服务器日志：',
+        noLog: '服务器输出将显示在这里。',
+        commandRequired: '请输入启动命令。',
+        detectedHint: '命令可以修改；普通文件夹请切换到静态模式。',
+        showLog: '显示日志',
+        hideLog: '隐藏日志',
+        hostOutdated: '插件宿主仍是旧版本——可打开静态文件夹，或重启 DSH 以启用 Node.js 模式。',
+        restartNeeded: '请重启 DSH 以加载新版插件宿主；客户端部分已就绪。',
+        nothingFound: '此文件夹中既没有 HTML 网站，也没有 Node.js 项目。请选择网站文件夹（或其子文件夹），或手动输入命令。',
         descIntro: '该插件将您界面的实时预览窗口直接集成到 DeepSeek Harness 工作区，把视觉元素与 AI 聊天的能力紧密相连。',
         f1t: '彻底告别手动复制',
         f1d: '流程自动化：完全无需复制神经网络的回答并手动粘贴到项目文件中。',
@@ -155,7 +228,9 @@ const STRINGS = {
         f3d: '安全修改：改动严格限定在目标组件内，项目架构和相邻功能完全不受影响。',
         f4t: '实时同步修改（Hot Reload）',
         f4d: '即时更新：AI 的修改在保存文件后立刻以实时方式显示在预览窗口中。',
-        versionNote: '当前版本 v1.0.0 为基础功能。后续版本将支持 Node.js 网站，之后会更新界面设计。',
+        f5t: '支持 Node.js 网站',
+        f5d: '插件会在 package.json 中查找 dev/start 脚本或 Node.js 入口，启动服务器并通过本地代理预览：HMR、API 请求和 DOM 检查器照常工作。',
+        versionNote: 'v2.0.0 —— 静态网站与 Node.js 项目：自动查找项目、启动开发服务器并通过代理预览。',
     },
 };
 function makeT(locale) {
@@ -257,6 +332,17 @@ const S = {
     // --- запуск проекта + подсказка -------------------------------------------
     launchCard: { borderRadius: 10, padding: 12, display: 'flex', flexDirection: 'column', gap: 8, background: 'var(--dsw-alias-bg-layer-1)', border: '1px solid var(--dsw-alias-border-l2)' },
     pathInput: { flex: 1, minWidth: 0, padding: '7px 9px', fontSize: 12, color: 'inherit', background: 'transparent', border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 7 },
+    commandInput: { width: '100%', boxSizing: 'border-box', padding: '7px 9px', fontSize: 12, color: 'inherit', background: 'transparent', border: '1px solid var(--dsw-alias-border-l2)', borderRadius: 7, fontFamily: 'ui-monospace, Consolas, monospace' },
+    modeBadge: (node) => ({
+        padding: '1px 7px', borderRadius: 999, fontSize: 10, fontWeight: 700, flexShrink: 0,
+        color: node ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-label-secondary)',
+        border: `1px solid ${node ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-border-l2)'}`,
+    }),
+    logPre: {
+        margin: 0, padding: '6px 8px', maxHeight: 130, overflow: 'auto', fontSize: 10.5, lineHeight: 1.45,
+        whiteSpace: 'pre-wrap', wordBreak: 'break-all', color: 'var(--dsw-alias-label-secondary)',
+        fontFamily: 'ui-monospace, Consolas, monospace',
+    },
     bigButton: { width: '100%', padding: '10px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontSize: 13.5, fontWeight: 700, color: '#fff', background: 'var(--dsw-alias-brand-primary)' },
     descCard: { borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', border: '1px solid var(--dsw-alias-border-l2)', background: 'rgba(127,127,139,.05)' },
     descIntro: { fontSize: 12, lineHeight: 1.5, color: 'var(--dsw-alias-label-secondary)', marginBottom: 12 },
@@ -448,6 +534,7 @@ function TabBody(props) {
     const React = getReact();
     if (!React)
         return null;
+    const el = React.createElement;
     const [locale, setLocale] = React.useState('ru');
     // Ручной переключатель языка (RU → EN → 中文) — переживает перезагрузку вкладки.
     React.useEffect(() => {
@@ -475,12 +562,60 @@ function TabBody(props) {
     const [files, setFiles] = React.useState([]);
     const [scanning, setScanning] = React.useState(false);
     const [file, setFile] = React.useState(null);
-    const [running, setRunning] = React.useState(null);
+    const [mode, setMode] = React.useState('static');
+    const [command, setCommand] = React.useState('');
+    const [reason, setReason] = React.useState('');
     const [device, setDevice] = React.useState(1920);
+    const [run, setRun] = React.useState(null);
+    const [logs, setLogs] = React.useState([]);
     const [errors, setErrors] = React.useState([]);
     const [note, setNote] = React.useState(null);
+    const [restartNeeded, setRestartNeeded] = React.useState(false);
+    const [logOpen, setLogOpen] = React.useState(true);
     const wsRef = React.useRef(null);
-    const manualRef = React.useRef(null);
+    const versionTimerRef = React.useRef(null);
+    const outboxRef = React.useRef([]);
+    const pendingStartRef = React.useRef(null);
+    const logRef = React.useRef(null);
+    const runRef = React.useRef(null);
+    runRef.current = run;
+    const send = React.useCallback((obj) => {
+        const ws = wsRef.current;
+        if (obj && obj.type === 'start')
+            pendingStartRef.current = obj;
+        if (ws && ws.readyState === 1) {
+            try { ws.send(JSON.stringify(obj)); return; } catch { /* уйдёт в очередь */ }
+        }
+        // Сокет ещё открывается/переподключается — не теряем команду запуска.
+        outboxRef.current.push(obj);
+        if (outboxRef.current.length > 50)
+            outboxRef.current.shift();
+    }, []);
+    /**
+     * Показывает найденный проект (автооткрытие папки сессии или ручной detect).
+     * Сам запуск делает кнопка «Запустить» либо applyDir для явно выбранной папки.
+     */
+    function applyDetected(msg) {
+        const nextMode = msg.mode === 'node' ? 'node' : 'static';
+        const nextFiles = Array.isArray(msg.files) ? msg.files.map((x) => String(x)) : [];
+        const nextCommand = normalizeCommand(typeof msg.command === 'string' ? msg.command : '');
+        const targetDir = String(msg.dir ?? '');
+        const staticFile = pickStaticFile(nextFiles, typeof msg.file === 'string' ? msg.file : '');
+        setDir(targetDir);
+        setMode(nextMode);
+        setCommand(nextCommand);
+        setReason(String(msg.reason ?? ''));
+        setFiles(nextFiles);
+        setFile(staticFile || null);
+        setScanning(false);
+        setRun(null);
+        setLogs([]);
+        setNote(null);
+        if (nextMode === 'static' && nextFiles.length === 0)
+            setNote(tRef.current('nothingFound'));
+        else if (nextMode === 'node' && !nextCommand)
+            setNote(tRef.current('commandRequired'));
+    }
     // --- локаль: снапшот + подписка (защитно, форма API может отличаться) ---
     React.useEffect(() => {
         const ctx = props.__ctx;
@@ -548,6 +683,21 @@ function TabBody(props) {
             ws.onopen = () => {
                 ws.send(JSON.stringify({ type: 'hello', role: 'sidebar', ...(sid ? { sessionId: sid } : {}) }));
                 try { ws.send(JSON.stringify({ type: 'hover-ms', ms: hoverMsRef.current })); } catch { /* ignore */ }
+                // Хост v2 отвечает версией; старый хост молчит — просим перезапуск DSH.
+                try { ws.send(JSON.stringify({ type: 'version' })); } catch { /* ignore */ }
+                // Досылаем команды, отправленные до открытия сокета.
+                const queued = outboxRef.current.splice(0);
+                let queuedStart = false;
+                for (const item of queued) {
+                    if (item && item.type === 'start')
+                        queuedStart = true;
+                    try { ws.send(JSON.stringify(item)); } catch { /* ignore */ }
+                }
+                if (!queuedStart && pendingStartRef.current) {
+                    try { ws.send(JSON.stringify(pendingStartRef.current)); } catch { /* ignore */ }
+                }
+                clearTimeout(versionTimerRef.current);
+                versionTimerRef.current = setTimeout(() => setRestartNeeded(true), 2500);
             };
             ws.onmessage = (ev) => {
                 let msg;
@@ -559,26 +709,71 @@ function TabBody(props) {
                 }
                 if (!msg || typeof msg !== 'object')
                     return;
+                clearTimeout(versionTimerRef.current);
+                setRestartNeeded(false);
                 switch (msg.type) {
-                    case 'status':
-                        if (msg.running && msg.port) {
-                            setRunning({ port: Number(msg.port), dir: String(msg.dir ?? '') });
-                            // Список файлов ведёт хост — клиент только отображает.
-                            if (Array.isArray(msg.files))
-                                setFiles(msg.files.map((x) => String(x)));
+                    case 'status': {
+                        const starting = Boolean(msg.starting);
+                        const active = Boolean(msg.running) || starting;
+                        if (Array.isArray(msg.files))
+                            setFiles(msg.files.map((x) => String(x)));
+                        if (Array.isArray(msg.logs))
+                            setLogs(msg.logs.map((x) => String(x)));
+                        if (typeof msg.mode === 'string')
+                            setMode(msg.mode === 'node' ? 'node' : 'static');
+                        if (typeof msg.command === 'string' && msg.command)
+                            setCommand(msg.command);
+                        if (active && msg.port) {
+                            pendingStartRef.current = null;
+                            const nextMode = msg.mode === 'node' ? 'node' : 'static';
+                            if (typeof msg.dir === 'string' && msg.dir)
+                                setDir(msg.dir);
+                            setRun({
+                                port: Number(msg.port),
+                                dir: String(msg.dir ?? ''),
+                                file: typeof msg.file === 'string' ? msg.file : '',
+                                mode: nextMode,
+                                command: typeof msg.command === 'string' ? msg.command : '',
+                                starting,
+                                devPort: typeof msg.devPort === 'number' ? msg.devPort : null,
+                            });
                             if (typeof msg.file === 'string' && msg.file)
                                 setFile(msg.file);
+                            setScanning(false);
+                            setNote(null);
                         }
-                        else {
-                            setRunning(null);
+                        else if (!active) {
+                            setRun(null);
                         }
+                        break;
+                    }
+                    case 'detected':
+                        applyDetected(msg);
+                        break;
+                    case 'version':
+                        clearTimeout(versionTimerRef.current);
+                        setRestartNeeded(false);
                         break;
                     case 'stopped':
-                        setRunning(null);
+                        pendingStartRef.current = null;
+                        setRun(null);
                         break;
                     case 'started-error':
+                        pendingStartRef.current = null;
                         setScanning(false);
+                        setRun(null);
                         setNote(String(msg.error ?? tRef.current('insertFailed')));
+                        break;
+                    case 'node-log': {
+                        const line = String(msg.line ?? '');
+                        if (line)
+                            setLogs((prev) => [...prev, line].slice(-300));
+                        break;
+                    }
+                    case 'node-exit':
+                        pendingStartRef.current = null;
+                        setRun(null);
+                        setNote(String(msg.error ?? tRef.current('serverOff')));
                         break;
                     case 'console-error': {
                         const entry = {
@@ -609,12 +804,20 @@ function TabBody(props) {
             catch { /* ignore */ } };
         };
         connect();
-        return () => { disposed = true; clearTimeout(timer); try {
+        return () => { disposed = true; clearTimeout(timer); clearTimeout(versionTimerRef.current); try {
             wsRef.current?.close();
         }
         catch { /* ignore */ } };
     }, [sidKey, props.__ctx]);
+    // Автопрокрутка лога сервера вниз.
+    React.useEffect(() => {
+        const node = logRef.current;
+        if (node)
+            node.scrollTop = node.scrollHeight;
+    }, [logs, logOpen]);
     // --- выбор папки проекта ---------------------------------------------
+    // Пользователь выбрал папку → хост сам ищет корень проекта (сама папка или
+    // подпапка), выбирает статический сайт или Node.js и запускает его.
     const applyDir = React.useCallback((raw) => {
         const clean = raw.trim().replace(/\\/g, '/');
         if (!clean)
@@ -623,12 +826,11 @@ function TabBody(props) {
         setDir(clean);
         setFiles([]);
         setScanning(true);
-        // Сканирование HTML ведёт хост; список придёт в статусе запуска.
-        try {
-            wsRef.current?.send(JSON.stringify({ type: 'start', dir: toPosix(clean), file: '' }));
-        }
-        catch { /* ignore */ }
-    }, []);
+        setRun(null);
+        setLogs([]);
+        setReason('');
+        send({ type: 'start', dir: toPosix(clean), file: '' });
+    }, [send]);
     const pickAndScan = React.useCallback(() => {
         const ctx = props.__ctx;
         let uiWs = null;
@@ -656,39 +858,80 @@ function TabBody(props) {
             applyDir(chosen);
         })();
     }, [props.__ctx, applyDir]);
-    // --- запуск / остановка сервера через WS-хаб ---
+    // --- режим, команда и запуск через WS-хаб ---
+    const launchOrPick = () => {
+        if (mode === 'node' && command.trim()) {
+            launch();
+            return;
+        }
+        if (mode === 'static' && files.length > 0) {
+            launch();
+            return;
+        }
+        // Ничего не найдено — большая кнопка открывает выбор другой папки.
+        pickAndScan();
+    };
+    const launch = React.useCallback(() => {
+        if (!dir)
+            return;
+        if (mode === 'static' && files.length === 0) {
+            setNote(tRef.current('nothingFound'));
+            return;
+        }
+        if (mode === 'node' && !command.trim()) {
+            setNote(tRef.current('commandRequired'));
+            return;
+        }
+        const cmd = mode === 'node' ? normalizeCommand(command) : '';
+        if (mode === 'node' && cmd !== command)
+            setCommand(cmd);
+        setNote(null);
+        setScanning(false);
+        send({
+            type: 'start',
+            dir: toPosix(dir),
+            file: mode === 'static' ? (file ?? '') : '',
+            mode,
+            command: cmd,
+        });
+    }, [dir, file, mode, command, send]);
     const startServer = React.useCallback((f) => {
         setFile(f);
-        try {
-            wsRef.current?.send(JSON.stringify({ type: 'start', dir: toPosix(dir ?? ''), file: f }));
-        }
-        catch { /* ignore */ }
-    }, [dir]);
+        setMode('static');
+        send({ type: 'start', dir: toPosix(dir ?? ''), file: f, mode: 'static' });
+    }, [dir, send]);
     const stopServer = React.useCallback(() => {
-        try {
-            wsRef.current?.send(JSON.stringify({ type: 'stop' }));
-        }
-        catch { /* ignore */ }
-        setRunning(null);
-    }, []);
-    // Перезапуск сервера: хаб сам остановит предыдущий прогон.
+        send({ type: 'stop' });
+        setRun(null);
+    }, [send]);
+    // Перезапуск: хаб сам остановит предыдущий прогон.
     const restartServer = React.useCallback(() => {
-        try { wsRef.current?.send(JSON.stringify({ type: 'start', dir: toPosix(dir ?? ''), file })); } catch { /* ignore */ }
-    }, [dir, file]);
+        const r = runRef.current;
+        const m = r?.mode ?? mode;
+        const c = m === 'node' ? normalizeCommand(r?.command ?? command) : '';
+        send({
+            type: 'start',
+            dir: toPosix(dir ?? ''),
+            file: m === 'static' ? (file ?? r?.file ?? '') : '',
+            mode: m,
+            command: c,
+        });
+    }, [dir, file, mode, command, send]);
     // Выход из проекта: останавливаем сервер и сбрасываем всё к экрану выбора папки.
     const exitProject = React.useCallback(() => {
-        try {
-            wsRef.current?.send(JSON.stringify({ type: 'stop' }));
-        }
-        catch { /* ignore */ }
-        setRunning(null);
+        send({ type: 'stop' });
+        setRun(null);
         setDir(null);
         setFiles([]);
         setFile(null);
         setErrors([]);
+        setLogs([]);
+        setReason('');
+        setMode('static');
+        setCommand('');
         setScanning(false);
         setNote(null);
-    }, []);
+    }, [send]);
     // --- копирование ошибки для ИИ ---
     const [copiedId, setCopiedId] = React.useState(null);
     const copyError = (entry) => {
@@ -696,50 +939,63 @@ function TabBody(props) {
             .then(() => { setCopiedId(entry.id); setTimeout(() => setCopiedId(null), 1500); });
     };
     // --- рендер -----------------------------------------------------------
-    const el = React.createElement;
     // Название бренда: красная R в PriRex.
     const brandName = () => el('span', null, 'Pri', el('span', { style: { color: BRAND_RED } }, 'R'), 'ex Preview');
-    if (!running && !dir) {
+    const modeChip = (m) => el('span', { style: S.modeBadge(m === 'node') }, m === 'node' ? 'Node.js' : 'Static');
+    const settingsCard = settingsOpen && el('div', { style: S.card }, el('div', { style: S.sectionTitle }, t('hoverTimeout')), el('div', { style: S.row }, [1500, 3000, 5000].map((ms) => el('button', { key: ms, style: hoverMs === ms ? S.buttonActive : S.button, onClick: () => changeHoverMs(ms) }, `${ms / 1000}${t('hoverSec')}`))));
+    if (!dir && !run) {
         ensureAnimStyles();
-        return el('div', { style: S.root }, 
+        return el('div', { style: S.root },
         // шапка бренда — общая для обоих экранов; справа версия, язык и настройки
         el('div', { style: S.header }, el(CrosshairIcon, { size: 16 }), brandName(), el('span', { style: S.hdrStatus }, el('span', { style: S.statusDot(false) }), t('serverOff')), el('span', { style: { marginLeft: 'auto', fontSize: 10.5, opacity: .55 } }, `v${VERSION}`), el('button', { style: S.langBtn, onClick: toggleLang }, locale === 'ru' ? 'EN' : locale === 'en' ? '中文' : 'RU'), el('button', { style: S.langBtn, title: t('settings'), onClick: () => setSettingsOpen(!settingsOpen) }, settingsOpen ? '✕' : '⚙')),
         // настройки (под шапкой): задержка ховера
-        settingsOpen && el('div', { style: S.card }, el('div', { style: S.sectionTitle }, t('hoverTimeout')), el('div', { style: S.row }, [[1500], [3000], [5000]].map(([ms]) => el('button', { key: ms, style: hoverMs === ms ? S.buttonActive : S.button, onClick: () => changeHoverMs(ms) }, `${ms / 1000}${t('hoverSec')}`)))),
+        settingsCard,
         // фоновая анимация: «сайт собирается и редактируется»
-        el('div', { className: 'prx-stage' }, el('div', { className: 'prx-scene' }, el('div', { className: 'prx-browser' }, el('div', { className: 'prx-bar' }, el('span', { className: 'prx-dot' }), el('span', { className: 'prx-dot' }), el('span', { className: 'prx-dot' })), el('div', { className: 'prx-body' }, el('div', { className: 'prx-hero', style: { animationDelay: '.55s' } }), el('div', { className: 'prx-row w80', style: { width: '82%', animationDelay: '.3s' } }), el('div', { className: 'prx-row', style: { width: '64%', animationDelay: '.45s' } })), el('span', { className: 'prx-cursor' }), el('span', { className: 'prx-ring' }), el('span', { className: 'prx-pill' }, t('d2hint'))))), 
-        // запуск проекта: путь + папка в одну строку, ниже — большая кнопка запуска
-        el('div', { style: S.launchCard }, el('div', { style: S.row }, el('input', {
-            ref: manualRef,
-            placeholder: t('pathPlaceholder'),
-            onKeyDown: (e) => { if (e.key === 'Enter')
-                applyDir(manualRef.current?.value ?? ''); },
-            style: S.pathInput,
-        }), el('button', { style: S.button, onClick: pickAndScan }, t('pickDirShort'))), el('button', { style: S.bigButton, onClick: () => applyDir(manualRef.current?.value ?? '') }, t('launchBtn')), note && el('div', { style: { ...S.note, color: 'var(--dsw-alias-state-warn)' } }, note)),
+        el('div', { className: 'prx-stage' }, el('div', { className: 'prx-scene' }, el('div', { className: 'prx-browser' }, el('div', { className: 'prx-bar' }, el('span', { className: 'prx-dot' }), el('span', { className: 'prx-dot' }), el('span', { className: 'prx-dot' })), el('div', { className: 'prx-body' }, el('div', { className: 'prx-hero', style: { animationDelay: '.55s' } }), el('div', { className: 'prx-row w80', style: { width: '82%', animationDelay: '.3s' } }), el('div', { className: 'prx-row', style: { width: '64%', animationDelay: '.45s' } })), el('span', { className: 'prx-cursor' }), el('span', { className: 'prx-ring' }), el('span', { className: 'prx-pill' }, t('d2hint'))))),
+        // запуск проекта: одна большая кнопка открывает выбор папки
+        el('div', { style: S.launchCard }, el('button', { style: S.bigButton, onClick: pickAndScan }, t('launchBtn')), restartNeeded && el('div', { style: { ...S.note, color: 'var(--dsw-alias-state-warn)' } }, t('restartNeeded')), note && el('div', { style: { ...S.note, color: 'var(--dsw-alias-state-warn)' } }, note)),
         // подсказка о возможностях (onboarding)
-        el('div', { style: S.descCard }, el('div', { style: S.descIntro }, t('descIntro')), ['f1', 'f2', 'f3', 'f4'].map((k, i) => el('div', { key: k, style: { marginBottom: i === 3 ? 0 : 11 } }, el('div', { style: S.featTitle }, t(`${k}t`)), el('div', { style: S.featText }, t(`${k}d`)))),
+        el('div', { style: S.descCard }, el('div', { style: S.descIntro }, t('descIntro')), ['f1', 'f2', 'f3', 'f4', 'f5'].map((k, i) => el('div', { key: k, style: { marginBottom: i === 4 ? 0 : 11 } }, el('div', { style: S.featTitle }, t(`${k}t`)), el('div', { style: S.featText }, t(`${k}d`)))),
         // примечание о версии (аккуратная мелкая строка над подвалом)
         el('div', { style: S.versionNote }, t('versionNote')),
         // подвал строго по центру внизу: разработано + логотип + GitHub
         el('div', { style: S.footerLine }, t('devBy'), el('a', { href: 'https://github.com/Prirex', target: '_blank', rel: 'noreferrer' }, el('img', { src: LOGO_DATA_URI, alt: 'PriRex', style: S.logoImg })), el('span', { style: { opacity: .45 } }, '|'), el('a', { href: 'https://github.com/Prirex', target: '_blank', rel: 'noreferrer', style: { fontSize: 12, color: 'var(--dsw-alias-label-secondary)', textDecoration: 'none' } }, 'github.com/Prirex'))));
     }
-    const url = running ? `http://127.0.0.1:${running.port}/${file ?? ''}` : null;
-    return el('div', { style: S.root }, 
+    const url = run && run.port ? `http://127.0.0.1:${run.port}/${run.mode === 'node' ? '' : (run.file || '')}` : null;
+    // Лог показываем и после падения процесса: run уже null, но вывод нужен для разбора.
+    const logMode = run ? run.mode : (mode === 'node' && logs.length > 0 ? 'node' : null);
+    const logCommand = run?.command || command;
+    return el('div', { style: S.root },
     // шапка бренда со статусом сервера и выходом из проекта
-    el('div', { style: S.header }, el(CrosshairIcon, { size: 16 }), brandName(), el('span', { style: S.hdrStatus }, el('span', { style: S.statusDot(Boolean(running)) }), t(running ? 'serverOn' : 'serverOff')), el('span', { style: { marginLeft: dir ? 8 : 'auto', fontSize: 10.5, opacity: .55 } }, `v${VERSION}`), el('button', { style: S.langBtn, onClick: toggleLang }, locale === 'ru' ? 'EN' : locale === 'en' ? '中文' : 'RU'), dir && el('button', { style: S.buttonDanger, onClick: exitProject }, t('exitProject'))),
+    el('div', { style: S.header }, el(CrosshairIcon, { size: 16 }), brandName(), el('span', { style: S.hdrStatus }, el('span', { style: S.statusDot(Boolean(run)) }), t(run ? (run.starting ? 'starting' : 'serverOn') : 'serverOff')), run && modeChip(run.mode), el('span', { style: { marginLeft: 'auto', fontSize: 10.5, opacity: .55 } }, `v${VERSION}`), el('button', { style: S.langBtn, onClick: toggleLang }, locale === 'ru' ? 'EN' : locale === 'en' ? '中文' : 'RU'), el('button', { style: S.langBtn, title: t('settings'), onClick: () => setSettingsOpen(!settingsOpen) }, settingsOpen ? '✕' : '⚙'), dir && el('button', { style: S.buttonDanger, onClick: exitProject }, t('exitProject'))),
+    settingsCard,
     // панель устройств — три кнопки ровно по спецификации
     el('div', { style: S.row }, el('button', { style: device === 1920 ? S.buttonActive : S.button, onClick: () => setDevice(1920) }, t('deviceDesktop')), el('button', { style: device === 768 ? S.buttonActive : S.button, onClick: () => setDevice(768) }, t('deviceTablet')), el('button', { style: device === 375 ? S.buttonActive : S.button, onClick: () => setDevice(375) }, t('deviceMobile')), url && el('button', { style: { ...S.button, marginLeft: 'auto' }, onClick: () => { try { window.open(url, '_blank'); } catch { /* ignore */ } } }, t('openBrowser'))),
+    // проект ещё не запущен: выбор режима, команда Node.js или HTML-файл
+    !run && el('div', { style: S.card }, el('div', { style: S.sectionTitle }, t('modeHeader')), dir && el('div', { style: { ...S.note, wordBreak: 'break-all' } }, dir), reason && el('div', { style: S.note }, reason), restartNeeded && el('div', { style: { ...S.note, color: 'var(--dsw-alias-state-warn)' } }, t('restartNeeded')), mode === 'node'
+        ? el('div', null, el('div', { style: { ...S.sectionTitle, marginTop: 2 } }, t('commandLabel')), el('input', {
+            value: command,
+            placeholder: t('commandPlaceholder'),
+            style: S.commandInput,
+            onChange: (e) => setCommand(e.target.value),
+            onKeyDown: (e) => { if (e.key === 'Enter')
+                launch(); },
+        }), el('div', { style: { ...S.note, marginTop: 6 } }, t('detectedHint')))
+        : (scanning
+            ? el('div', { style: S.note }, t('loadingFiles'))
+            : el('div', { style: S.listWrap }, files.length === 0 ? el('div', { style: S.note }, t('noFiles')) : files.slice(0, 200).map((f) => el('button', { key: f, style: S.fileItem(f === file), onClick: () => startServer(f) }, f)))), el('button', { style: S.bigButton, onClick: launchOrPick }, mode === 'node' ? t('launchNode') : t('launchBtn'))),
     // WebView-контейнер: сайт всегда вписывается в ширину боковой панели
-    url && el('div', { style: S.iframeBox }, el('div', { style: { width: device, maxWidth: '100%', margin: '0 auto', height: '100%' } }, el('iframe', { key: url, src: url, style: { ...S.iframe }, title: 'PriRex Preview' }))), 
-    // список файлов (пока сервер не запущен или для смены файла)
-    !url && el('div', { style: S.card }, el('div', { style: S.sectionTitle }, t('filesHeader')), el('div', { style: S.listWrap }, scanning && el('div', { style: S.note }, t('loadingFiles')), !scanning && files.length === 0 && dir && el('div', { style: S.note }, t('noFiles')), ...files.slice(0, 200).map((f) => el('button', { key: f, style: S.fileItem(f === file), onClick: () => startServer(f) }, f)))), 
+    url && el('div', { style: S.iframeBox }, el('div', { style: { width: device, maxWidth: '100%', margin: '0 auto', height: '100%' } }, el('iframe', { key: url, src: url, style: { ...S.iframe }, title: 'PriRex Preview' }))),
+    // лог Node.js-сервера: команда, порт приложения и живой вывод
+    logMode === 'node' && el('div', { style: S.card }, el('div', { style: { ...S.sectionTitle, justifyContent: 'space-between' } }, el('span', null, t('serverLog')), el('button', { style: { ...S.langBtn, textTransform: 'none' }, onClick: () => setLogOpen(!logOpen) }, logOpen ? t('hideLog') : t('showLog'))), logCommand && el('div', { style: S.note }, `${t('commandLabel')} ${logCommand}`), run?.devPort && el('div', { style: S.note }, `127.0.0.1:${run.devPort}`), logOpen && el('pre', { ref: logRef, style: S.logPre }, logs.length ? logs.slice(-80).join('\n') : t('noLog'))),
     // журнал ошибок консоли
     el('div', { style: S.card }, el('div', { style: S.sectionTitle }, t('errorsHeader')), el('div', { style: S.logWrap }, errors.length === 0
         ? el('div', { style: S.note }, t('noErrors'))
-        : errors.map((e) => el('div', { key: e.id, style: S.logItem }, el('span', null, `${e.level}${e.source ? ` — ${e.source}` : ''}${typeof e.line === 'number' ? `:${e.line}` : ''}: ${e.message}`), el('button', { style: { alignSelf: 'flex-start', ...S.button, fontSize: 11 }, onClick: () => copyError(e) }, copiedId === e.id ? t('copied') : t('copyForAi')))))), 
-    // служебная строка заметок + стоп сервера
-    el('div', { style: S.row }, running && el('button', { style: S.button, onClick: restartServer }, t('restartServer')), running && el('button', { style: S.button, onClick: stopServer }, t('stopServer')), note && el('span', { style: { ...S.note, color: 'var(--dsw-alias-state-warn)' } }, note)));
+        : errors.map((e) => el('div', { key: e.id, style: S.logItem }, el('span', null, `${e.level}${e.source ? ` — ${e.source}` : ''}${typeof e.line === 'number' ? `:${e.line}` : ''}: ${e.message}`), el('button', { style: { alignSelf: 'flex-start', ...S.button, fontSize: 11 }, onClick: () => copyError(e) }, copiedId === e.id ? t('copied') : t('copyForAi')))))),
+    // служебная строка заметок + управление сервером
+    el('div', { style: S.row }, run && el('button', { style: S.button, onClick: restartServer }, t('restartServer')), run && el('button', { style: S.button, onClick: stopServer }, t('stopServer')), note && el('span', { style: { ...S.note, color: 'var(--dsw-alias-state-warn)', whiteSpace: 'pre-wrap' } }, note)));
 }
+
 // ---------------------------------------------------------------------------
 // Регистрация вкладки (паттерн templates/decoration/client.js: ctx.slots.inject
 // + ctx.slots.register; keyed-слоты под нашим ключом TAB_ID)

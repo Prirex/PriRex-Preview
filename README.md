@@ -6,7 +6,7 @@
 
 <h1 align="center">PriRex Preview</h1>
 
-<p align="center"><em>Live preview · device frames · console error feed · point-and-ask DOM inspector — inside DeepSeek Harness.</em></p>
+<p align="center"><em>Live preview · static &amp; Node.js servers · device frames · console error feed · point-and-ask DOM inspector — inside DeepSeek Harness.</em></p>
 
 <p align="center">
   <a href="https://github.com/Prirex/PriRex-Preview"><img alt="Platform" src="https://img.shields.io/badge/DeepSeek%20Harness-web%20plugin-4D6BFE?style=for-the-badge&logo=deepseek&logoColor=white"></a>
@@ -49,20 +49,35 @@ The loop closed: the agent edited the code and the page reloaded through live re
 ### Overview
 
 PriRex Preview is a local development companion for **DeepSeek Harness (DSH)**. It adds a
-`PriRex Preview` tab to the right panel: pick a project folder, get it served over HTTP with
-live reload, review it in desktop/tablet/mobile frames, watch console errors stream in, and
-point at any element on the page to have its markup and computed CSS dropped straight into
-your chat input.
+`PriRex Preview` tab to the right panel: pick a project folder and get it served over HTTP with
+live reload — a static site from the built-in server, or a Node.js project started with its own
+`dev`/`start` script and proxied through localhost. Review it in desktop/tablet/mobile frames,
+watch console errors stream in, and point at any element on the page to have its markup and
+computed CSS dropped straight into your chat input.
 
 Everything is **local by design**: the HTTP server and the WebSocket hub bind to `127.0.0.1`,
 no telemetry is emitted, and nothing leaves your machine.
 
 ### Key Features
 
-- **One-click live server** — serves the selected folder from an ephemeral localhost port with
-  CORS enabled; `index.html` is picked automatically when present.
-- **WebSocket live reload** — `chokidar` watches `*.html`, `*.htm`, `*.css`, `*.js` and pushes a
-  `reload` signal to the embedded WebView (150 ms debounce, so save storms stay quiet).
+- **Automatic project discovery** — pick a folder and the tab scans it (and up to two levels of
+  subfolders): a static HTML site wins, otherwise it finds a Node.js project — including one
+  nested in a child folder — and starts it. You can pick the parent of the site, not only its
+  exact root.
+- **Two preview modes** — pick a folder: a plain static site is served from an ephemeral
+  localhost port with CORS enabled (`index.html` is picked automatically), while a Node.js
+  project is launched with its own dev script and previewed through a local reverse proxy.
+- **Node.js dev servers** — `dev` / `start` / `serve` / `preview` scripts are detected in
+  `package.json` (npm, pnpm, yarn and bun are recognised by lockfile or `packageManager`), and
+  a Node.js entry file is used when no script exists. If the declared manager is not installed
+  in the DSH process, the script runs through `npm run` instead (already-installed
+  `node_modules` are reused). The command is shown in the tab and can be edited before launch;
+  the dev-server port is found in its output and the server log streams live into the tab.
+- **Proxy keeps every feature** — the proxy injects the inspector into HTML responses, rewrites
+  absolute redirects, forwards API requests of any method and passes WebSocket upgrades
+  through, so Vite/Next HMR keeps working inside the preview.
+- **WebSocket live reload** — `chokidar` watches project sources and pushes a `reload` signal to
+  the embedded WebView (150 ms static / 350 ms Node.js debounce, so save storms stay quiet).
 - **Device frames** — 1920 px desktop, 768 px tablet, 375 px mobile, scaled to fit the sidebar.
 - **Console error feed** — captures `window.onerror`, `unhandledrejection` and `console.error`
   from the previewed page, with source/line/column; one click copies a ready-to-paste report.
@@ -114,20 +129,38 @@ automatically, so no manual patch editing is required.
    </html>
    ```
 
-2. Open the right panel → **PriRex Preview** tab → choose the folder → press **Run**.
+2. Open the right panel → **PriRex Preview** tab → choose the folder (it is scanned and started
+   automatically).
 3. Switch device width, then hover the `<h1>` for ~3 s: it freezes and the edit panel opens.
 4. Type `make the title red and larger` → <kbd>Enter</kbd>. The inspector payload lands in your
    chat draft; send it and let the agent edit the code — the page reloads itself on save.
 5. Click **Break me** to see the error arrive in the console feed.
 
 The tab also auto-opens the current session's working directory on first connect when the server
-is not running yet.
+is not running yet. Picking a folder (from the session or manually) scans it and starts the found
+static site or Node.js project; opening the tab itself never executes a project script.
+
+### Node.js projects
+
+1. Pick a folder with a site or a `package.json` — a parent folder is fine, the tab scans up to
+   two levels of subfolders (Express, Vite, Next, Nuxt, SvelteKit, Astro, a plain `server.js`, …).
+   A static HTML site wins; if there is none, a Node.js project is found.
+2. The tab shows the resolved project root and command, e.g. `package.json → npm run dev`. The
+   manager follows the lockfile (`pnpm-lock.yaml`, `yarn.lock`, `bun.lockb`) or the
+   `packageManager` field; if that manager is missing from the DSH PATH the script falls back
+   to `npm run`, and if there is no script a Node.js entry file is used.
+3. The project starts automatically after you pick the folder. The tab streams the server log,
+   reads the first `http://localhost:<port>` line from it, and opens the site through the proxy —
+   the inspector, console feed, device frames and HMR all work as in static mode.
+4. Press **Stop server** to kill the whole process tree.
 
 ### Configuration
 
 | Variable           | Default   | Description                                    |
 | ------------------ | --------- | ---------------------------------------------- |
 | `PRIREX_HUB_PORT`  | `3099`    | Port of the local WebSocket hub (`127.0.0.1`).  |
+| `PRIREX_NODE_TIMEOUT` | `120000` | How long to wait for a Node.js dev-server port (ms). |
+| `PRIREX_ALLOWED_ORIGINS` | – | Extra comma-separated browser origins allowed to use the hub (localhost and the DSH Desktop `dsh-app://app` origin are always allowed). |
 
 Per-user settings stored in `localStorage`:
 
@@ -139,12 +172,13 @@ Per-user settings stored in `localStorage`:
 ### Wire Protocol
 
 Hub: `ws://127.0.0.1:3099`. Page side identifies itself with `hello`; the sidebar tab sends
-control messages.
+control messages. In static mode `port` is the preview server; in Node.js mode it is the proxy,
+and `devPort` is the detected dev-server port.
 
 | Direction        | Message                                                            |
 | ---------------- | ------------------------------------------------------------------ |
-| tab → host       | `{type:'hello', sessionId}` · `{type:'start', dir, file}` · `{type:'stop'}` · `{type:'status'}` · `{type:'hover-ms', ms}` |
-| host → tab       | `{type:'status', running, port, dir, file, files}` · `{type:'stopped'}` · `{type:'started-error', error}` |
+| tab → host       | `{type:'hello', sessionId}` · `{type:'detect', dir}` · `{type:'start', dir, file, mode?, command?}` · `{type:'stop'}` · `{type:'status'}` · `{type:'hover-ms', ms}` |
+| host → tab       | `{type:'detected', dir, mode, command, manager, script, entry, reason, files, file}` · `{type:'status', running, starting, mode, port, devPort, dir, file, files, command, logs}` · `{type:'node-log', line, stream}` · `{type:'node-exit', code, signal, error}` · `{type:'stopped'}` · `{type:'started-error', error}` |
 | host → page      | `{type:'reload', file}` · `{type:'hover-ms', ms}`                   |
 | page → host → tab| `{type:'console-error', level, message, source, line, col}` · `{type:'inspector-prompt', comment, html, styles}` |
 
@@ -152,7 +186,7 @@ control messages.
 
 ```text
 PriRex-Preview/
-├─ index.ts               # host service: WS hub, HTTP server, file watcher, HTML injection
+├─ index.ts               # host service: WS hub, static server, Node.js runner, proxy, watcher, HTML injection
 ├─ client.cts             # browser artifact source: right-panel tab (React via DSH module table)
 ├─ logo-data.ts           # inlined brand logo for the client bundle
 ├─ cordis.patch.yml       # DSH bundle patch that registers the plugin row
@@ -175,11 +209,17 @@ npm run check      # build + smoke
 `client.cts` is compiled to CJS and then rewritten by [`scripts/finalize-client.mjs`](scripts/finalize-client.mjs)
 into an IIFE, because DSH evaluates client entries as classic scripts.
 
+A running DSH keeps the host module it loaded at startup, so restart DSH after changing
+`index.ts`; the client artifact is re-served on the next page refresh. The tab also tolerates an
+older host: when `detect` is not answered it falls back to the v1.0 `start` flow.
+
 ### Security
 
-Local-only tool: both servers bind to `127.0.0.1`, static serving is path-traversal guarded, and
-the inspector never auto-sends messages. Found a problem? See [SECURITY.md](SECURITY.md) —
-please report privately, never in a public issue.
+Local-only tool: both servers bind to `127.0.0.1`, static serving is path-traversal guarded, the
+inspector never auto-sends messages, and a project's Node.js script is started only after you
+explicitly pick its folder (or press **Start Node.js server**) — never merely by opening the tab
+or a session. Found a problem? See [SECURITY.md](SECURITY.md) — please report privately, never in
+a public issue.
 
 ### Publishing to npm (optional)
 
@@ -190,6 +230,32 @@ scope — update `name` in `package.json`, `cordis.patch.yml` and the `id` in
 under the package name.
 
 ### Changelog / What's new
+
+#### v2.0.0 — automatic project discovery
+
+- Picking a folder now scans that folder and up to two levels of subfolders: a static HTML site
+  wins, otherwise a Node.js project is located (even inside a child folder) and started
+  automatically. The resolved project root is shown in the tab.
+- The main **Launch** button opens the folder picker directly; there is no separate path field
+  and no mode switch — the static/Node.js choice is made by the automatic scan.
+- DSH Desktop loads its UI from the `dsh-app://app` origin; the hub now accepts it (previously
+  the tab connected and was immediately disconnected, so the preview stayed on “Scanning files…”).
+- If the project declares pnpm/yarn/bun but that manager is missing from the DSH PATH, the dev
+  script runs through `npm run` instead of failing with “command not found”.
+- A folder with neither an HTML site nor a Node.js project gets a clear message instead of an
+  empty 404 preview.
+- Version metadata is now 2.0.0; future-version notices were removed.
+
+#### v1.1.0 — Node.js sites (unreleased: superseded by 2.0.0)
+
+- Host: project detection (`dev`/`start`/`serve`/`preview` scripts, package manager by lockfile
+  or `packageManager`, Node.js entry fallback), dev-server spawn with streamed logs and port
+  detection, whole-process-tree stop, and a local reverse proxy that injects the inspector,
+  rewrites absolute redirects, forwards any API method and passes WebSocket upgrades through.
+- Client: static / Node.js launch mode switch, editable command with the detected default, live
+  server log, mode badge and updated trilingual copy.
+- Tests: end-to-end Node.js fixture covering proxy HTML/API/POST/redirect, HMR upgrade, reload
+  and process shutdown.
 
 #### v1.0.0 — first public release
 
@@ -211,19 +277,34 @@ under the package name.
 
 PriRex Preview — локальный инструмент разработки для **DeepSeek Harness (DSH)**. Он добавляет
 вкладку `PriRex Preview` в правую панель: выбираете папку проекта — получаете локальный
-HTTP-сервер с живой перезагрузкой, фреймы «десктоп / планшет / мобильный», журнал ошибок
-консоли со страницы и DOM-инспектор, который по наведению на элемент вставляет его разметку
-и вычисленные CSS-стили прямо в поле ввода чата.
+HTTP-сервер с живой перезагрузкой для статического сайта или запуск собственного
+`dev`/`start`-скрипта Node.js с предпросмотром через локальный прокси; ниже — фреймы
+«десктоп / планшет / мобильный», журнал ошибок консоли со страницы и DOM-инспектор, который по
+наведению на элемент вставляет его разметку и вычисленные CSS-стили прямо в поле ввода чата.
 
 Всё работает **только локально**: HTTP-сервер и WebSocket-хаб слушают `127.0.0.1`, телеметрии
 нет, данные не покидают машину.
 
 ### Ключевые возможности
 
-- **Сервер в один клик** — выбранная папка раздаётся на свободном порту localhost с открытым
-  CORS; `index.html` подхватывается автоматически.
-- **Live-reload по WebSocket** — `chokidar` следит за `*.html`, `*.htm`, `*.css`, `*.js` и шлёт
-  сигнал `reload` во встроенный WebView (дебаунс 150 мс, чтобы серии сохранений не спамили).
+- **Автопоиск проекта** — выбираете папку, вкладка сканирует её и до двух уровней подпапок:
+  приоритет у статического HTML-сайта, иначе находится Node.js-проект (даже во вложенной
+  папке) и запускается сам. Можно выбрать родительскую папку, а не только корень сайта.
+- **Два режима предпросмотра** — выбранная папка: статический сайт раздаётся на свободном порту
+  localhost с открытым CORS (`index.html` подхватывается автоматически), а Node.js-проект
+  запускается своим dev-скриптом и показывается через локальный обратный прокси.
+- **Node.js dev-серверы** — скрипты `dev` / `start` / `serve` / `preview` находятся в
+  `package.json` (npm, pnpm, yarn и bun определяются по lock-файлу или полю `packageManager`),
+  при их отсутствии используется точка входа Node.js. Если объявленный менеджер не установлен
+  в процессе DSH, скрипт запускается через `npm run` (уже установленные `node_modules`
+  переиспользуются). Команда видна во вкладке и её можно изменить перед запуском; порт
+  dev-сервера берётся из его вывода, а лог сервера идёт в вкладку.
+- **Прокси сохраняет все функции** — инспектор внедряется в HTML, абсолютные редиректы
+  переписываются, API-запросы любого метода пробрасываются, а WebSocket-апгрейды проходят
+  насквозь, поэтому HMR Vite/Next продолжает работать внутри предпросмотра.
+- **Live-reload по WebSocket** — `chokidar` следит за исходниками и шлёт сигнал `reload` во
+  встроенный WebView (дебаунс 150 мс для статики и 350 мс для Node.js, чтобы серии сохранений
+  не спамили).
 - **Панель устройств** — 1920 px десктоп, 768 px планшет, 375 px мобильный, с подгонкой под
   ширину боковой панели.
 - **Журнал ошибок консоли** — перехват `window.onerror`, `unhandledrejection` и `console.error`
@@ -278,7 +359,8 @@ pnpm run smoke      # или: npm run smoke
    </html>
    ```
 
-2. Откройте правую панель → вкладку **PriRex Preview** → выберите папку → нажмите **Запустить**.
+2. Откройте правую панель → вкладку **PriRex Preview** → выберите папку (она сама сканируется
+   и запускается).
 3. Переключите ширину устройства и наведите курсор на `<h1>` на ~3 с: элемент заморозится и
    откроется панель правки.
 4. Напишите «сделай заголовок красным и крупнее» → <kbd>Enter</kbd>. Данные инспектора окажутся
@@ -286,13 +368,30 @@ pnpm run smoke      # или: npm run smoke
 5. Нажмите «Сломай меня», чтобы увидеть ошибку в журнале консоли.
 
 Если сервер ещё не запущен, вкладка при первом подключении сама открывает рабочую папку текущей
-сессии.
+сессии. Статическая папка запускается сразу; Node.js-проект останавливается на карточке запуска,
+чтобы скрипт из `package.json` не выполнялся без явного нажатия.
+
+### Node.js-проекты
+
+1. Выберите папку с сайтом или с `package.json` — можно даже родительскую: вкладка сама
+   просканирует вложенные папки. Сначала ищется статический HTML-сайт, если его нет —
+   Node.js-проект (Express, Vite, Next, Nuxt, SvelteKit, Astro, обычный `server.js`).
+2. Вкладка покажет найденный корень проекта и команду, например `package.json → npm run dev`.
+   Менеджер берётся из lock-файла (`pnpm-lock.yaml`, `yarn.lock`, `bun.lockb`) или поля
+   `packageManager`; если такого менеджера нет в PATH процесса DSH, скрипт запускается через
+   `npm run`, а при отсутствии скриптов используется точка входа Node.js.
+3. Статический сайт и Node.js-проект запускаются автоматически после выбора папки. Лог сервера
+   идёт во вкладку, порт берётся из первой строки `http://localhost:<port>`, сайт открывается
+   через прокси — инспектор, журнал ошибок, фреймы устройств и HMR работают в обоих режимах.
+4. **Стоп сервера** завершает всё дерево процессов.
 
 ### Настройки
 
 | Переменная        | По умолчанию | Назначение                                        |
 | ----------------- | ------------ | ------------------------------------------------- |
 | `PRIREX_HUB_PORT` | `3099`       | Порт локального WebSocket-хаба (`127.0.0.1`).      |
+| `PRIREX_NODE_TIMEOUT` | `120000` | Сколько ждать порт Node.js dev-сервера (мс).      |
+| `PRIREX_ALLOWED_ORIGINS` | – | Дополнительные Origin через запятую, которым разрешён хаб (localhost и `dsh-app://app` из DSH Desktop разрешены всегда). |
 
 Пользовательские настройки в `localStorage`:
 
@@ -305,7 +404,7 @@ pnpm run smoke      # или: npm run smoke
 
 ```text
 PriRex-Preview/
-├─ index.ts               # хост-сервис: WS-хаб, HTTP-сервер, watcher, инъекция в HTML
+├─ index.ts               # хост-сервис: WS-хаб, статический сервер, запуск Node.js, прокси, watcher, инъекция
 ├─ client.cts             # исходник браузерной части: вкладка правой панели (React из таблицы DSH)
 ├─ logo-data.ts           # инлайн-логотип для клиентского бандла
 ├─ cordis.patch.yml       # патч бандла DSH, регистрирующий строку плагина
@@ -328,11 +427,18 @@ npm run check      # build + smoke
 `client.cts` компилируется в CJS, а затем [`scripts/finalize-client.mjs`](scripts/finalize-client.mjs)
 оборачивает результат в IIFE: DSH исполняет клиентские записи как классические скрипты.
 
+Запущенный DSH держит в памяти хост-модуль, загруженный при старте, поэтому после правок
+`index.ts` перезапустите DSH; клиентский артефакт подхватывается при следующем обновлении
+страницы. Вкладка совместима и со старым хостом: если на `detect` нет ответа, она откатывается
+к протоколу `start` версии 1.0.
+
 ### Безопасность
 
-Инструмент строго локальный: оба сервера слушают `127.0.0.1`, раздача файлов защищена от
-path traversal, инспектор никогда не отправляет сообщения сам. Нашли проблему — см.
-[SECURITY.md](SECURITY.md), сообщайте приватно, не через публичный issue.
+Инструмент строго локальный: все серверы слушают `127.0.0.1`, раздача файлов защищена от
+path traversal, инспектор никогда не отправляет сообщения сам, а скрипт Node.js-проекта
+запускается только после того, как вы явно выбрали его папку (или нажали
+**Запустить Node.js-сервер**) — не при простом открытии вкладки или сессии. Нашли проблему —
+см. [SECURITY.md](SECURITY.md), сообщайте приватно, не через публичный issue.
 
 ### Публикация в npm (опционально)
 
@@ -343,10 +449,39 @@ path traversal, инспектор никогда не отправляет со
 
 ### Что нового
 
+#### v2.0.0 — автопоиск проекта
+
+- Выбор папки теперь сканирует её и до двух уровней подпапок: приоритет у статического
+  HTML-сайта, иначе находится Node.js-проект (даже во вложенной папке) и запускается сам.
+  Найденный корень проекта показывается во вкладке.
+- Большая кнопка **Запустить проект** сразу открывает выбор папки — отдельного поля пути
+  и переключателя режимов больше нет: статику или Node.js выбирает автопоиск.
+- DSH Desktop открывает интерфейс из `dsh-app://app`; хаб теперь принимает этот Origin
+  (раньше вкладка подключалась и сразу отключалась, поэтому предпросмотр висел на «Поиск файлов…»).
+- Если проект объявляет pnpm/yarn/bun, а менеджера нет в PATH процесса DSH, dev-скрипт
+  запускается через `npm run`, а не падает с «команда не найдена».
+- Если в папке нет ни HTML-сайта, ни Node.js-проекта, выводится понятное сообщение вместо
+  пустого предпросмотра с 404.
+- Версия метаданных — 2.0.0; упоминания будущих версий убраны.
+
+#### v1.1.0 — Node.js-сайты (не публиковалась: заменена 2.0.0)
+
+- Хост: определение проекта (скрипты `dev`/`start`/`serve`/`preview`, менеджер по lock-файлу
+  или `packageManager`, запасная точка входа), запуск dev-сервера с потоковым логом и поиском
+  порта, остановка всего дерева процессов и локальный обратный прокси с инъекцией инспектора,
+  перезаписью абсолютных редиректов, пробросом API любого метода и WebSocket-апгрейдов.
+- Клиент: переключатель режимов «статический сайт / Node.js», редактируемая команда с
+  определённым значением по умолчанию, живой лог сервера, бейдж режима и обновлённые тексты RU/EN/中文.
+- Тесты: сквозной Node.js-фикстур (прокси HTML/API/POST/redirect, HMR, reload, остановка процесса).
+
 #### v1.0.0 — первый публичный релиз
 
-
-
+- Хост-сервис: WebSocket-хаб на `127.0.0.1:3099`, HTTP-сервер предпросмотра на свободном порту,
+  live-reload через `chokidar`, поиск HTML с ограничениями по глубине и количеству,
+  автооткрытие рабочей папки сессии.
+- Вкладка клиента: панель устройств (1920/768/375), журнал ошибок консоли с копированием для ИИ,
+  точечный DOM-инспектор с таймером и заморозкой, интерфейс RU/EN/中文.
+- Тулчейн: воспроизводимая сборка (`tsc` + финализатор клиента), VM smoke-тест, сквозной тест хаба.
 ### Лицензия
 
 [MIT](LICENSE) © 2026 [Prirex](https://github.com/Prirex)

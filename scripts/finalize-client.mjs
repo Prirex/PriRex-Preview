@@ -20,8 +20,9 @@ const cjsPath = join(root, 'lib', 'client.cjs');
 const outPath = join(root, 'lib', 'client.js');
 
 // tsc добавляет UTF-8 BOM в начало emit-файлов — для браузера уберём.
+// Заодно срезаем хвостовые пробелы, которые tsc иногда оставляет в emit.
 const raw = readFileSync(cjsPath, 'utf8').replace(/^\uFEFF/, '');
-const lines = raw.split(/\r?\n/);
+const lines = raw.split(/\r?\n/).map((line) => line.replace(/[ \t]+$/, ''));
 
 const kept = [];
 let droppedStrict = false;
@@ -52,6 +53,10 @@ if (!body.includes('window.__ModuleLoader__')) {
     console.error('ОШИБКА: в lib/client.cjs не найдена регистрация window.__ModuleLoader__.');
     process.exit(1);
 }
+
+// Коммитим и CJS-промежуток, поэтому чистим его от хвостовых пробелов тоже,
+// сохраняя маркеры tsc — скрипт остаётся повторно запускаемым без пересборки.
+writeFileSync(cjsPath, lines.join('\n'), 'utf8');
 
 const out = '(function () {\n\'use strict\';\n' + body + '\n})();\n';
 writeFileSync(outPath, out, 'utf8');

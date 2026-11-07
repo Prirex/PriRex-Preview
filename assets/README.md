@@ -17,6 +17,13 @@ The section reads as one loop: **before → inspector → chat draft → result*
 
 Notes / Заметки:
 
+- **Screenshots were captured on the v1.0.0 UI** — the version chip reads `v1.0.0` and the start
+  screen still had a path field and a static/Node switch. Re-shoot `preview.png` for a v2.0.0
+  release announcement (the start screen now has a single **Launch project** button).
+  / **Скриншоты сняты на интерфейсе v1.0.0** — плашка версии показывает `v1.0.0`, а на стартовом
+  экране ещё были поле пути и переключатель «статика/Node». Для анонса v2.0.0 переснимите
+  `preview.png` (на стартовом экране теперь одна кнопка **Запустить проект**).
+
 - `chat-insertion.png` documents the core loop: inspector payload → draft → you press send
   (auto-submit is always off). / Ключевой цикл: payload инспектора → черновик → отправляете вы.
 - `result.png` must stay consistent with `preview.png`: same page, same request, "after" state.

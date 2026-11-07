@@ -1,9 +1,9 @@
 {
   "name": "dsh-prirex-preview",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "PriRex Preview: живой предпросмотр в DeepSeek Harness — локальный сервер + WebSocket live-reload, панель устройств, перехват ошибок консоли и точечный DOM-инспектор с CSS-метаданными.",
+  "description": "PriRex Preview: живой предпросмотр в DeepSeek Harness — автопоиск статического сайта или Node.js-проекта, локальный сервер и dev-сервер за прокси, WebSocket live-reload, панель устройств, перехват ошибок консоли и точечный DOM-инспектор с CSS-метаданными.",
   "license": "MIT",
   "author": {
     "name": "Prirex",
@@ -23,6 +23,8 @@
     "deepseek-harness",
     "live-reload",
     "websocket",
+    "nodejs",
+    "dev-server",
     "dom-inspector",
     "preview",
     "developer-tools"
