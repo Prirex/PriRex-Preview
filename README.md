@@ -114,6 +114,35 @@ automatically, so no manual patch editing is required.
 > `lib/` is committed on purpose — the compiled plugin works without a build step. Rebuild only
 > after touching `index.ts` or `client.cts`.
 
+#### Installing from GitHub vs. from a local path
+
+Both routes work, but they must not occupy the same slot at the same time.
+
+- **From GitHub** (for users) — *Plugins → Install bundle → GitHub*, repository
+  `Prirex/PriRex-Preview`. pnpm copies the package into the profile as real files; `lib/` is
+  already committed, so nothing is built during install.
+- **From a local path** (while developing) — DSH links the folder with a directory junction at
+  `node_modules/dsh-prirex-preview`.
+
+If a local link is still in place and you then install the GitHub version, pnpm cannot replace the
+junction and aborts before writing anything:
+
+```text
+[ERR_PNPM_EPERM] [importPackage ...\node_modules\dsh-prirex-preview]
+EPERM: operation not permitted, rename '...dsh-prirex-preview_tmp_12345_8' -> '...dsh-prirex-preview'
+```
+
+Removing the local link fixes it — only the junction is deleted, the project folder stays intact:
+
+```powershell
+# close DeepSeek Harness first
+cmd /c rmdir "C:\Users\<you>\.dsh\profiles\desktop\node_modules\dsh-prirex-preview"
+```
+
+The same `EPERM` can also surface on the symlink step (`symlink 'D:\...\node_modules\...' -> ...`),
+when the junction points at a folder with its own `node_modules`; both variants have the same root
+cause. The reverse order matters too: before linking a local folder, remove the GitHub copy.
+
 ### Quick Start
 
 1. Create any static page, e.g. `index.html`:
@@ -343,6 +372,35 @@ pnpm run smoke      # или: npm run smoke
 
 > Каталог `lib/` закоммичен намеренно: собранный плагин работает без шага сборки. Пересобирайте
 > только после правок `index.ts` или `client.cts`.
+
+#### Установка с GitHub и из локальной папки
+
+Работают оба способа, но они не должны занимать одно и то же место одновременно.
+
+- **С GitHub** (для пользователей) — *Плагины → Установить бандл → GitHub*, репозиторий
+  `Prirex/PriRex-Preview`. pnpm копирует пакет в профиль настоящими файлами; `lib/` уже
+  закоммичен, поэтому при установке ничего не собирается.
+- **Из локальной папки** (при разработке) — DSH подключает папку junction-ссылкой
+  `node_modules/dsh-prirex-preview`.
+
+Если локальная ссылка уже стоит, а вы ставите версию с GitHub, pnpm не может заменить junction и
+падает до записи файлов:
+
+```text
+[ERR_PNPM_EPERM] [importPackage ...\node_modules\dsh-prirex-preview]
+EPERM: operation not permitted, rename '...dsh-prirex-preview_tmp_12345_8' -> '...dsh-prirex-preview'
+```
+
+Лечится удалением локальной ссылки — удаляется только junction, папка проекта остаётся на месте:
+
+```powershell
+# сначала закройте DeepSeek Harness
+cmd /c rmdir "C:\Users\<вы>\.dsh\profiles\desktop\node_modules\dsh-prirex-preview"
+```
+
+Тот же `EPERM` может прийти и с шага симлинков (`symlink 'D:\...\node_modules\...' -> ...`), когда
+junction указывает на папку с собственным `node_modules`; причина у обоих вариантов одна. Обратный
+порядок тоже важен: перед подключением локальной папки уберите копию, установленную с GitHub.
 
 ### Быстрый старт
 
